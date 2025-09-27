@@ -1,26 +1,26 @@
-/* Import Raleway */
 @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700;800;900&display=swap');
 
-:root{
-  --brand:#d10d09;        /* rouge marque */
-  --text:#1b1b1b;
-  --muted:#6b6b6b;
-  --bg:#ffffff;
+:root {
+  --brand: #d10d09;
+  --text: #1b1b1b;
+  --muted: #6b6b6b;
+  --bg: #ffffff;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-.page{
+.page {
   background: var(--bg);
-  color: var(--text);
-  min-height:100dvh;
+  color: var(--brand);
+  min-height: 100dvh;
   font-family: "Raleway", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---------- Header ---------- */
-.header{
+.header {
   position: sticky;
   top: 0;
   z-index: 40;
@@ -28,7 +28,7 @@
   border-bottom: 1px solid #eee;
 }
 
-.headerInner{
+.headerInner {
   max-width: 1100px;
   margin: 0 auto;
   padding: 0.75rem clamp(1rem, 3vw, 2rem);
@@ -36,38 +36,36 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  min-height: 64px;
 }
 
-.brand{
+.brand {
   display: inline-flex;
-  flex-direction: column;
-  line-height: 0.9;
+  align-items: center;
   text-decoration: none;
-}
-.brandLine1,
-.brandLine2{
-  font-weight: 900;
-  letter-spacing: 0.02em;
-  color: var(--brand);
-  font-size: clamp(1rem, 2.6vw, 1.25rem);
-}
-.brandLine2{
-  position: relative;
-}
-.brandLine2::after{
-  content: "";
-  position: absolute;
-  left: -0.15em;
-  right: -0.15em;
-  bottom: -0.18em;
-  height: 0.22em;
-  background: var(--brand);
-  border-radius: 999px;
-  opacity: 0.85;
+  line-height: 0;
 }
 
-/* burger (mobile) */
-.burger{
+.brandLogo {
+  display: block;
+  height: clamp(40px, 6.5vw, 72px);
+  width: auto;
+  object-fit: contain;
+}
+
+@media (min-width:1200px) {
+  .brandLogo {
+    height: 76px;
+  }
+}
+
+@media (max-width:360px) {
+  .brandLogo {
+    height: clamp(36px, 9vw, 52px);
+  }
+}
+
+.burger {
   display: inline-flex;
   flex-direction: column;
   gap: 5px;
@@ -76,32 +74,38 @@
   padding: 6px 4px;
   cursor: pointer;
 }
-.burger span{
+
+.burger span {
   width: 26px;
   height: 2px;
-  background: var(--text);
+  background: var(--brand);
   display: block;
   border-radius: 2px;
 }
-@media (min-width: 880px){
-  .burger{ display: none; }
+
+@media (min-width:880px) {
+  .burger {
+    display: none;
+  }
 }
 
-/* nav */
-.nav{
+.nav {
   position: absolute;
   inset: auto 0 0 0;
   transform: translateY(-100%);
   transition: transform .25s ease;
   background: var(--bg);
-  padding: 0 1rem 0.75rem;
+  padding: 0 1rem .75rem;
   display: grid;
-  gap: 0.5rem;
+  gap: .5rem;
 }
-.navOpen{ transform: translateY(0); }
 
-@media (min-width: 880px){
-  .nav{
+.navOpen {
+  transform: translateY(0);
+}
+
+@media (min-width:880px) {
+  .nav {
     position: static;
     transform: none !important;
     display: flex;
@@ -112,149 +116,190 @@
   }
 }
 
-.navLink{
+.navLink {
   text-decoration: none;
-  font-weight: 700; /* Raleway est fine, on renforce un peu */
-  color: var(--text);
-  padding: 0.5rem 0.6rem;
+  font-weight: 700;
+  color: var(--brand);
+  padding: .5rem .6rem;
   border-radius: 8px;
 }
-.navLink:hover{ background: #f6f6f6; }
 
-.cta{
+.navLink:hover {
+  background: #f6f6f6;
+}
+
+.cta {
   background: var(--brand);
   color: #fff !important;
-  padding: 0.45rem 0.8rem;
+  padding: .45rem .8rem;
   border-radius: 10px;
   font-weight: 800;
-  box-shadow: 0 1px 0 rgba(0,0,0,.06);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
 }
-.cta:hover{ filter: brightness(0.95); }
 
-/* ---------- Main / Section ---------- */
-.main{
+.cta:hover {
+  filter: brightness(.95);
+}
+
+.main {
   display: grid;
   place-items: start center;
   padding: clamp(1rem, 2vw, 2rem);
 }
 
-.section{
+.section {
   max-width: 780px;
   width: 100%;
-  padding: clamp(1.2rem, 3vw, 2rem) clamp(0.8rem, 3vw, 2rem);
+  padding-left: clamp(.8rem, 3vw, 2rem);
+  padding-right: clamp(.8rem, 3vw, 2rem);
 }
 
-.title{
+.title {
   text-align: center;
   color: var(--brand);
   font-weight: 900;
-  letter-spacing: -0.01em;
+  letter-spacing: -.01em;
   font-size: clamp(2rem, 4.8vw, 3.2rem);
-  margin: 0.4rem 0 1.2rem;
+  margin: .4rem 0 1.2rem;
 }
 
-.content{
+/* ===== UNE SEULE CLASSE POUR TOUS LES BLOCS DE TEXTE ===== */
+.text {
   display: grid;
-  gap: clamp(0.8rem, 1.8vw, 1.2rem);
+  gap: clamp(.8rem, 1.8vw, 1.2rem);
+  margin-top: 1.2rem;
   font-size: clamp(1rem, 1.4vw, 1.125rem);
   line-height: 1.75;
-  font-weight: 500;
-}
-.content p{ margin: 0; }
-.content em{ font-style: italic; color: var(--text); }
-.content strong{ font-weight: 800; }
-
-/* (Ancienne flèche centrée – non utilisée, conservée si besoin)
-.arrow{
-  display: grid;
-  place-items: center;
-  margin-top: clamp(1.5rem, 3vw, 2rem);
-}
-.arrowIcon{
-  width: clamp(28px, 4vw, 40px);
-  height: auto;
+  font-weight: 600;
   color: var(--brand);
-  animation: bounce 1.6s infinite;
-}
-@keyframes bounce{
-  0%,100%{ transform: translateY(0); opacity: 0.8; }
-  50%{ transform: translateY(6px); opacity: 1; }
-}
-*/
-
-/* ---------- Small polish on very narrow screens ---------- */
-@media (max-width: 360px){
-  .cta{ font-size: 0.9rem; padding: 0.4rem 0.6rem; }
-  .headerInner{ padding: 0.6rem 0.75rem; }
 }
 
-/* ---------- Blocks objectifs ---------- */
-.block{
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+.text p {
+  margin: 0;
 }
 
-.objTitle{
+.text em {
+  font-style: italic;
+  color: inherit;
+}
+
+.text strong {
   font-weight: 800;
-  letter-spacing: -0.01em;
+}
+
+.objTitle {
+  font-weight: 800;
+  letter-spacing: -.01em;
   font-size: clamp(1.1rem, 2vw, 1.3rem);
   color: var(--brand);
-  margin-bottom: 0.25rem;
+  margin-bottom: .25rem;
 }
 
-.list{
+.list {
   list-style: disc inside;
-  padding-left: 0.5rem;
+  padding-left: .5rem;
   display: grid;
-  gap: 0.4rem;
+  gap: .4rem;
   font-size: clamp(1rem, 1.4vw, 1.1rem);
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--brand);
 }
 
-/* ---------- Bouton pétition ---------- */
-.petitionBox{
+/* Pétition */
+.petitionBox {
   display: grid;
   place-items: center;
   margin-top: 1rem;
+  width: 100%;
+  padding-inline: 1rem;
 }
 
-.petitionBtn{
-  display: inline-block;
+.petitionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: var(--brand);
   color: #fff;
   font-weight: 800;
-  letter-spacing: 0.01em;
+  letter-spacing: .01em;
   text-decoration: none;
-  padding: 0.75rem 1.2rem;
-  border-radius: 10px;
+  line-height: 1.1;
+  font-size: clamp(1.1rem, 5.2vw, 1.6rem);
+  padding: clamp(.9rem, 4.2vw, 1.2rem) clamp(1.2rem, 6.5vw, 2rem);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
   transition: transform .05s ease, filter .2s ease;
-  box-shadow: 0 2px 0 rgba(0,0,0,.08);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .08);
 }
-.petitionBtn:hover{ filter: brightness(0.95); }
-.petitionBtn:active{ transform: translateY(1px); }
 
-/* ---------- Flèche mobile fixée en bas ---------- */
-/* Affichée uniquement sur mobile (<768px), disparaît sur le dernier bloc via classes Hidden/Visible */
-.mobileArrow{
+.petitionBtn:hover {
+  filter: brightness(.95);
+}
+
+.petitionBtn:active {
+  transform: translateY(1px);
+}
+
+@media (max-width:360px) {
+  .petitionBtn {
+    font-size: clamp(1.05rem, 6vw, 1.35rem);
+    padding: clamp(.85rem, 5vw, 1.05rem) clamp(1rem, 7vw, 1.4rem);
+    border-radius: 12px;
+  }
+}
+
+@media (min-width:768px) {
+  .petitionBtn {
+    width: auto;
+    font-size: clamp(1.4rem, 2.2vw, 2rem);
+    padding: 1.1rem 2.8rem;
+    border-radius: 12px;
+  }
+}
+
+/* Flèche mobile */
+.mobileArrow {
   position: fixed;
-  left: 50%; transform: translateX(-50%);
+  left: 50%;
+  transform: translateX(-50%);
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  width: 44px; height: 44px; border-radius: 999px;
-  border: 0; cursor: pointer;
-  display: grid; place-items: center;
-  background: var(--brand); color: #fff;
-  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
   transition: opacity .25s ease, visibility .25s ease, transform .08s ease;
 }
-.mobileArrow:active{ transform: translateX(-50%) translateY(1px); }
 
-.mobileArrowIcon{ width: 26px; height: 26px; }
+.mobileArrow:active {
+  transform: translateX(-50%) translateY(1px);
+}
 
-.mobileArrowHidden{ opacity: 0; visibility: hidden; pointer-events: none; }
-.mobileArrowVisible{ opacity: 1; visibility: visible; }
+.mobileArrowIcon {
+  width: 26px;
+  height: 26px;
+}
 
-/* Cacher la flèche sur tablette/desktop */
-@media (min-width:768px){
-  .mobileArrow{ display: none; }
+.mobileArrowHidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mobileArrowVisible {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (min-width:768px) {
+  .mobileArrow {
+    display: none;
+  }
 }
