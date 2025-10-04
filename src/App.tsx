@@ -1,6 +1,335 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./App.module.css";
 import logoUrl from "./assets/logo.png";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { getColorFromValue, timeAgo } from "@/utils";
+
+type Parking = {
+  id: number;
+  name: string;
+  lastUpdated: number;
+  capacity: number;
+  occupation: number;
+  coordinates: [number, number][];
+  paint: { "line-color": string; "line-width": number };
+  open: boolean;
+};
+
+
+const Parkings: Parking[] = [
+  {
+    id: 1,
+    name: "Parking Skema Nord",
+    lastUpdated: Date.now() - 1000 * 60 * 7,
+    capacity: 50,
+    occupation: 75,
+    coordinates: [
+      [7.0562, 43.6124],
+      [7.0566, 43.6124],
+      [7.0566, 43.6127],
+      [7.0562, 43.6127],
+      [7.0562, 43.6124],
+    ],
+    paint: { "line-color": getColorFromValue(75), "line-width": 6 },
+    open: true,
+  },
+];
+
+export function ParkingPopup({
+  parking,
+  onClose,
+  onApply,
+}: {
+  parking: Parking;
+  onClose: () => void;
+  onApply: (newOccupation: number) => void;
+}) {
+  const [value, setValue] = useState<number>(parking.occupation);
+  const sinceText = useMemo(() => timeAgo(parking.lastUpdated), [parking.lastUpdated]);
+  const color = useMemo(() => getColorFromValue(value), [value]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        background: "white",
+        borderRadius: 12,
+        boxShadow: "0 10px 32px rgba(0,0,0,0.25)",
+        padding: "16px 18px 14px",
+        minWidth: 260,
+        maxWidth: 340,
+        pointerEvents: "auto",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Titre */}
+      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 10 }}>
+        {parking.name}
+      </div>
+
+      {/* Capacité + approximations */}
+      <div style={{ fontSize: 13, marginBottom: 10, color: "#333" }}>
+        Capacité<strong> ≈ {parking.capacity}</strong> places
+        <div style={{ marginTop: 4, color: "#555" }}>
+        </div>
+      </div>
+
+      {/* Slider Occupation */}
+      <label
+        htmlFor="occupation-slider"
+        style={{ display: "block", fontSize: 13, marginBottom: 6 }}
+      >
+        Occupation : <strong>{value}%</strong>
+      </label>
+
+      <input
+        id="occupation-slider"
+        type="range"
+        min={0}
+        max={100}
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+        style={{
+          width: "100%",
+          marginBottom: 8,
+          appearance: "none",
+          height: 6,
+          borderRadius: 3,
+          background:
+            "linear-gradient(90deg, #00C853 0%, #FFD600 50%, #D50000 100%)",
+          outline: "none",
+          cursor: "pointer",
+        }}
+      />
+      {/* Personnalisation du curseur */}
+      <style>
+        {`
+          #occupation-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: ${color};
+            border: 2px solid white;
+            box-shadow: 0 0 3px rgba(0,0,0,0.4);
+          }
+          #occupation-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: ${color};
+            border: 2px solid white;
+            box-shadow: 0 0 3px rgba(0,0,0,0.4);
+          }
+        `}
+      </style>
+
+      {/* Ligne "dernière mise à jour" */}
+      <div
+        style={{
+          fontSize: 12,
+          color: "#555",
+          marginTop: 6,
+          marginBottom: 12,
+        }}
+      >
+        Dernière mise à jour il y a {sinceText}
+      </div>
+
+      {/* Boutons actions */}
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button
+          onClick={onClose}
+          style={{
+            appearance: "none",
+            border: "1px solid #ccc",
+            background: "#fff",
+            padding: "8px 12px",
+            borderRadius: 8,
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          Annuler
+        </button>
+        <button
+          onClick={() => onApply(value)}
+          style={{
+            appearance: "none",
+            border: "none",
+            background: "#111",
+            color: "white",
+            padding: "8px 12px",
+            borderRadius: 8,
+            fontSize: 14,
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Appliquer
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CampusMap() {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const [selectedParking, setSelectedParking] = useState<Parking | null>(null);
+  const selectedParkingRef = useRef<Parking | null>(null);
+
+  const [parkings, setParkings] = useState<Parking[]>([...Parkings]);
+
+  const parkingsRef = useRef<Parking[]>(parkings);
+  useEffect(() => {
+    parkingsRef.current = parkings;
+  }, [parkings]);
+
+  const centerLng = 7.056407;
+  const centerLat = 43.612551;
+  const delta = 0.005;
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+      center: [centerLng, centerLat],
+      zoom: 16,
+      minZoom: 15,
+      maxZoom: 19,
+      maxBounds: [
+        [centerLng - delta, centerLat - delta],
+        [centerLng + delta, centerLat + delta],
+      ],
+    });
+
+    mapRef.current = map;
+
+    map.on("load", () => {
+      parkings.forEach((p) => {
+        const sourceId = `parking-${p.id}`;
+        const layerId = `parking-${p.id}`;
+
+        map.addSource(sourceId, {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: { id: p.id },
+            geometry: { type: "LineString", coordinates: p.coordinates },
+          },
+        });
+
+        map.addLayer({
+          id: layerId,
+          type: "line",
+          source: sourceId,
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": p.paint["line-color"],
+            "line-width": p.paint["line-width"],
+          },
+        });
+
+        map.on("mouseenter", layerId, () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", layerId, () => (map.getCanvas().style.cursor = ""));
+
+        map.on("click", layerId, (e) => {
+          const f = e.features?.[0];
+          const id = Number(f?.properties?.id ?? p.id);
+          const fresh = parkingsRef.current.find(x => x.id === id) ?? p;
+          setSelectedParking(fresh);
+        });
+      });
+    });
+
+    const closeIfOutside = (e: maplibregl.MapMouseEvent) => {
+      if (!selectedParkingRef.current) return;
+      const layers = Parkings.map((p) => `parking-${p.id}`);
+      const feats = map.queryRenderedFeatures(e.point, { layers });
+      if (feats.length === 0) setSelectedParking(null);
+    };
+    map.on("click", closeIfOutside);
+
+    return () => {
+      map.off("click", closeIfOutside);
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  const handleApply = (newOccupation: number) => {
+    if (!selectedParking) return;
+    const newColor = getColorFromValue(newOccupation);
+    setParkings(prev =>
+      prev.map(p =>
+        p.id === selectedParking.id
+          ? { ...p, occupation: newOccupation, lastUpdated: Date.now() }
+          : p
+      )
+    );
+    setSelectedParking(prev =>
+      prev ? { ...prev, occupation: newOccupation, lastUpdated: Date.now() } : prev
+    );
+    const map = mapRef.current;
+    const layerId = `parking-${selectedParking.id}`;
+    if (map && map.getLayer(layerId)) {
+      map.setPaintProperty(layerId, "line-color", newColor);
+    }
+  };
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: 720 }}>
+      {/* Carte */}
+      <div
+        ref={containerRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: 6,
+          overflow: "hidden",
+          boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
+        }}
+      />
+
+      {selectedParking && (
+        <div
+          onClick={() => setSelectedParking(null)}
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 9,
+            background: "transparent",
+          }}
+        />
+      )}
+
+      {/* Popup centré visuellement */}
+      {selectedParking && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 10,
+            pointerEvents: "none",
+          }}
+        >
+          <ParkingPopup
+            parking={selectedParking}
+            onClose={() => setSelectedParking(null)}
+            onApply={handleApply}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
   const [open, setOpen] = useState(false);
@@ -64,6 +393,10 @@ export default function App() {
       </header>
 
       <main id="mission" className={styles.main}>
+        <section className={styles.section} aria-label="Carte campus">
+          <CampusMap />
+        </section>
+
         <section className={styles.section}>
           <h1 className={styles.title}>Notre mission</h1>
 

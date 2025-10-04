@@ -11,6 +11,8 @@
     "postbuild": "cp dist/index.html dist/404.html || copy dist\\index.html dist\\404.html"
   },
   "dependencies": {
+    "@types/node": "^24.6.2",
+    "maplibre-gl": "^5.7.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
