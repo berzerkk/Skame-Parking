@@ -250,22 +250,18 @@ function CampusMap() {
     };
   }, []);
 
-  // Ajoute / met à jour les couches quand parkings change
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return; // On sort immédiatement si pas de carte
+    const m = mapRef.current;
+    if (!m) return;
 
-    let cleanup: (() => void) | undefined; // <-- on déclare un cleanup optionnel
+    let cleanup: (() => void) | undefined;
 
-    // Fonction de synchro des couches
-    function syncLayersWithMap() {
+    function syncLayersWithMap(mm: maplibregl.Map) {
       parkings.forEach((p) => {
-        console.log(p);
-
         const sourceId = `parking-${p.id}`;
         const layerId = `parking-${p.id}`;
 
-        const source = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+        const source = mm.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
         const data = {
           type: "Feature" as const,
           properties: { id: p.id },
@@ -274,8 +270,8 @@ function CampusMap() {
 
         if (!source) {
           // Ajoute la source et la couche
-          map.addSource(sourceId, { type: "geojson", data });
-          map.addLayer({
+          mm.addSource(sourceId, { type: "geojson", data });
+          mm.addLayer({
             id: layerId,
             type: "line",
             source: sourceId,
@@ -286,9 +282,9 @@ function CampusMap() {
             },
           });
 
-          map.on("mouseenter", layerId, () => (map.getCanvas().style.cursor = "pointer"));
-          map.on("mouseleave", layerId, () => (map.getCanvas().style.cursor = ""));
-          map.on("click", layerId, (e) => {
+          mm.on("mouseenter", layerId, () => (mm.getCanvas().style.cursor = "pointer"));
+          mm.on("mouseleave", layerId, () => (mm.getCanvas().style.cursor = ""));
+          mm.on("click", layerId, (e) => {
             const f = e.features?.[0];
             const id = Number(f?.properties?.id ?? p.id);
             const fresh = parkingsRef.current.find((x) => x.id === id) ?? p;
@@ -298,29 +294,29 @@ function CampusMap() {
         } else {
           // Mise à jour
           source.setData(data as any);
-          if (map.getLayer(layerId)) {
-            map.setPaintProperty(layerId, "line-color", p.paint["line-color"]);
-            map.setPaintProperty(layerId, "line-width", p.paint["line-width"]);
+          if (mm.getLayer(layerId)) {
+            mm.setPaintProperty(layerId, "line-color", p.paint["line-color"]);
+            mm.setPaintProperty(layerId, "line-width", p.paint["line-width"]);
           }
         }
       });
     }
 
     // Si le style n'est pas encore chargé, on attend
-    if (!map.isStyleLoaded()) {
-      const onLoad = () => syncLayersWithMap();
-      map.on("load", onLoad);
-      cleanup = () => map.off("load", onLoad); // <-- on garde le cleanup ici
+    if (!m.isStyleLoaded()) {
+      const onLoad = () => syncLayersWithMap(m);
+      m.on("load", onLoad);
+      cleanup = () => m.off("load", onLoad);
     } else {
       // Sinon, on synchronise directement
-      syncLayersWithMap();
+      syncLayersWithMap(m);
     }
 
-    // Toujours retourner une fonction de nettoyage
     return () => {
       if (cleanup) cleanup();
     };
   }, [parkings]);
+
 
   const handleApply = async (newOccupation: number) => {
     if (!selectedParking) return;
@@ -356,7 +352,7 @@ function CampusMap() {
       occupation: newOccupation,
       lastUpdated: Date.now(),
       "paint.line-color": newColor,
-    }).catch(async (e) => {
+    }).catch(async () => {
       // si le doc n'existe pas (edge), on le crée
       await setDoc(ref, {
         ...selectedParking,
