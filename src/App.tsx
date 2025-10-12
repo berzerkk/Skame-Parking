@@ -1,15 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./App.module.css";
-import logoUrl from "./assets/logo.png";
+import logoUrl from "/logo.png";
 import maplibregl from "maplibre-gl";
+import type { Feature, Point, LineString, Position } from "geojson";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getColorFromValue, timeAgo } from "@/utils";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, doc, setDoc, getDocs, updateDoc, onSnapshot, collection, serverTimestamp, writeBatch, GeoPoint } from "firebase/firestore";
-import { type Parking, SEED } from "@/Parking";
-import { getAuth, signInAnonymously } from "firebase/auth";
+import {
+  getFirestore, doc, setDoc, getDocs, updateDoc, onSnapshot,
+  collection, serverTimestamp, writeBatch, GeoPoint
+} from "firebase/firestore";
+import {
+  getAuth, signInAnonymously, signInWithRedirect,
+  GoogleAuthProvider, OAuthProvider, linkWithRedirect,
+  sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink,
+  onAuthStateChanged
+} from "firebase/auth";
+import { SEED, type Parking } from "@/Parking";
 
+import { FcGoogle } from "react-icons/fc";
+import { FaMicrosoft } from "react-icons/fa";
 
+/* ---------------- Firebase ---------------- */
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FB_API_KEY,
   authDomain: import.meta.env.VITE_FB_AUTH_DOMAIN,
@@ -20,10 +32,35 @@ const firebaseConfig = {
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-
 const auth = getAuth();
+const google = new GoogleAuthProvider();
+const microsoft = new OAuthProvider("microsoft.com");
+
+// Session anonyme pour lire/écrire selon tes règles
 signInAnonymously(auth).catch(console.error);
 
+// Crée/merge un profil user quand connecté
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
+  try {
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        uid: user.uid,
+        email: user.email || null,
+        displayName: user.displayName || null,
+        provider: user.providerData?.[0]?.providerId || (user.isAnonymous ? "anonymous" : "unknown"),
+        photoURL: user.photoURL || null,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+/* ---------------- Seed ---------------- */
 async function seedIfEmpty() {
   const snap = await getDocs(collection(db, "parkings"));
   if (!snap.empty) return;
@@ -35,15 +72,43 @@ async function seedIfEmpty() {
     batch.set(doc(db, "parkings", id), {
       ...p,
       coordinates: coords,
-      paint: { "line-color": getColorFromValue(p.occupation), "line-width": 10 },
-      lastUpdated: Date.now(),
       createdAt: serverTimestamp(),
     });
   }
   await batch.commit();
 }
 
-/* ---------------- Popup ---------------- */
+/* ---------------- Auth helpers ---------------- */
+const actionCodeSettings = {
+  url: window.location.origin, // revient sur l’origin, on finalise côté app
+  handleCodeInApp: true,
+};
+
+async function sendMagicLink(email: string) {
+  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+  localStorage.setItem("emailForSignIn", email);
+}
+
+async function completeEmailLinkIfNeeded() {
+  if (isSignInWithEmailLink(auth, window.location.href)) {
+    const stored = localStorage.getItem("emailForSignIn");
+    const email = stored || window.prompt("Confirme ton e-mail") || "";
+    if (!email) return;
+    await signInWithEmailLink(auth, email, window.location.href);
+    localStorage.removeItem("emailForSignIn");
+  }
+}
+
+async function providerAuthOrLink(provider: GoogleAuthProvider | OAuthProvider) {
+  const u = auth.currentUser;
+  if (u && u.isAnonymous) {
+    // On upgrade le compte anonyme -> garde les données Firestore
+    return linkWithRedirect(u, provider);
+  }
+  return signInWithRedirect(auth, provider);
+}
+
+/* ---------------- Popup occupation ---------------- */
 export function ParkingPopup({
   parking,
   onClose,
@@ -55,117 +120,159 @@ export function ParkingPopup({
 }) {
   const [value, setValue] = useState<number>(parking.occupation);
   const sinceText = useMemo(() => timeAgo(parking.lastUpdated), [parking.lastUpdated]);
-  const color = useMemo(() => getColorFromValue(value), [value]);
 
   return (
-    <div
-      style={{
-        position: "relative",
-        background: "white",
-        borderRadius: 12,
-        boxShadow: "0 10px 32px rgba(0,0,0,0.25)",
-        padding: "16px 18px 14px",
-        minWidth: 260,
-        maxWidth: 340,
-        pointerEvents: "auto",
-        fontFamily:
-          "system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 10 }}>
-        {parking.name}
-      </div>
+    <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.popupTitle}>{parking.name}</div>
 
-      <div style={{ fontSize: 13, marginBottom: 10, color: "#333" }}>
+      <div className={styles.popupInfo}>
         Capacité<strong> ≈ {parking.capacity}</strong> places
       </div>
 
-      <label
-        htmlFor="occupation-slider"
-        style={{ display: "block", fontSize: 13, marginBottom: 6 }}
-      >
+      <label htmlFor="occupation-slider" className={styles.sliderLabel}>
         Occupation : <strong>{value}%</strong>
       </label>
 
       <input
         id="occupation-slider"
+        className={styles.slider}
         type="range"
         min={0}
         max={100}
         value={value}
         onChange={(e) => setValue(Number(e.target.value))}
-        style={{
-          width: "100%",
-          marginBottom: 8,
-          appearance: "none",
-          height: 6,
-          borderRadius: 3,
-          background:
-            "linear-gradient(90deg, #00C853 0%, #FFD600 50%, #D50000 100%)",
-          outline: "none",
-          cursor: "pointer",
-        }}
       />
-      <style>
-        {`
-          #occupation-slider::-webkit-slider-thumb {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: ${color};
-            border: 2px solid white;
-            box-shadow: 0 0 3px rgba(0,0,0,0.4);
-          }
-          #occupation-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: ${color};
-            border: 2px solid white;
-            box-shadow: 0 0 3px rgba(0,0,0,0.4);
-          }
-        `}
-      </style>
 
-      <div style={{ fontSize: 12, color: "#555", marginTop: 6, marginBottom: 12 }}>
+      <div className={styles.popupSince}>
         Dernière mise à jour il y a {sinceText}
       </div>
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <button
-          onClick={onClose}
-          style={{
-            appearance: "none",
-            border: "1px solid #ccc",
-            background: "#fff",
-            padding: "8px 12px",
-            borderRadius: 8,
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
+      <div className={styles.popupFooter}>
+        <button onClick={onClose} className={`${styles.btn} ${styles.btnGhost}`}>
           Annuler
         </button>
         <button
           onClick={() => onApply(value)}
-          style={{
-            appearance: "none",
-            border: "none",
-            background: "#111",
-            color: "white",
-            padding: "8px 12px",
-            borderRadius: 8,
-            fontSize: 14,
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
+          className={`${styles.btn} ${styles.btnPrimary}`}
         >
           Appliquer
         </button>
       </div>
     </div>
+  );
+}
+
+/* ---------------- Auth Modal ---------------- */
+function AuthModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Finalise la connexion par lien magique si on revient d’un clic mail
+    completeEmailLinkIfNeeded().catch(console.error);
+  }, []);
+
+  if (!open) return null;
+
+  const doGoogle = async () => {
+    try {
+      setBusy(true);
+      await providerAuthOrLink(google);
+    } catch (e: any) {
+      setError(e?.message || "Erreur Google");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doMicrosoft = async () => {
+    try {
+      setBusy(true);
+      await providerAuthOrLink(microsoft);
+    } catch (e: any) {
+      setError(e?.message || "Erreur Microsoft");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doMagic = async () => {
+    try {
+      setError(null);
+      if (!email || !/.+@.+\..+/.test(email)) {
+        setError("Entre un e-mail valide");
+        return;
+      }
+      setBusy(true);
+      await sendMagicLink(email);
+      setSent(true);
+    } catch (e: any) {
+      setError(e?.message || "Impossible d’envoyer le lien");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className={styles.authOverlay} onClick={onClose} />
+      <div className={styles.authModal} role="dialog" aria-modal="true" aria-label="Connexion / Inscription">
+        <div className={styles.authStack}>
+          <button className={styles.authClose} onClick={onClose} aria-label="Fermer">×</button>
+          <h3 className={styles.authTitle}>Connexion / Inscription</h3>
+          <p className={styles.authSubtitle}>Choisis une option rapide et sécurisée</p>
+          <button className={styles.authBtn} onClick={doGoogle}>
+            <FcGoogle size={20} style={{ marginRight: 8 }} />
+            Continuer avec Google
+          </button>
+
+          <button className={styles.authBtn} onClick={doMicrosoft}>
+            <FaMicrosoft color="#2F2F2F" size={20} style={{ marginRight: 8 }} />
+            Continuer avec Microsoft
+          </button>
+
+          <div className={styles.authDivider}><span>ou</span></div>
+
+          <div className={styles.authEmailRow}>
+            <input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="ton@email.com"
+              className={styles.authInput}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={busy || sent}
+            />
+            <button
+              className={`${styles.authBtn} ${styles.authEmailBtn}`}
+              onClick={doMagic}
+              disabled={busy || sent}
+            >
+              {sent ? "Lien envoyé ✔" : "Recevoir un lien"}
+            </button>
+          </div>
+
+          {error && <div className={styles.authError}>{error}</div>}
+
+          <p className={styles.authHelper}>
+            Astuce : si tu es déjà connecté en anonyme, on **conservera tes données** en reliant ton compte.
+          </p>
+
+          <p className={styles.authLegal}>
+            En continuant, tu acceptes nos CGU et notre Politique de confidentialité.
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -179,32 +286,20 @@ function CampusMap() {
 
   const [parkings, setParkings] = useState<Parking[]>([]);
   const parkingsRef = useRef<Parking[]>(parkings);
-  useEffect(() => {
-    parkingsRef.current = parkings;
-  }, [parkings]);
+  useEffect(() => { parkingsRef.current = parkings; }, [parkings]);
 
   const centerLng = 7.056407;
   const centerLat = 43.612551;
   const delta = 0.005;
 
-  // Seed Firestore si vide + subscribe temps réel
   useEffect(() => {
     (async () => {
       await seedIfEmpty();
       const unsub = onSnapshot(collection(db, "parkings"), (snap) => {
         const rows: Parking[] = snap.docs.map((d) => {
           const data = d.data() as any;
-          const coords = (data.coordinates ?? []).map(
-            (g: any) => [g._long, g._lat]
-          );
-          return {
-            ...data,
-            coordinates: coords,
-            paint: {
-              "line-color": getColorFromValue(data.occupation ?? 0),
-              "line-width": data?.paint?.["line-width"] ?? 10,
-            },
-          };
+          const coords = (data.coordinates ?? []).map((g: any) => [g._long, g._lat]);
+          return { ...data, coordinates: coords };
         });
         setParkings(rows);
       });
@@ -212,7 +307,6 @@ function CampusMap() {
     })();
   }, []);
 
-  // Init Map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -230,10 +324,6 @@ function CampusMap() {
     });
 
     mapRef.current = map;
-
-    map.on("load", () => {
-      // Les couches seront ajoutées/maj dans l’effet suivant (syncLayersWithMap)
-    });
 
     const closeIfOutside = (e: maplibregl.MapMouseEvent) => {
       if (!selectedParkingRef.current) return;
@@ -262,26 +352,44 @@ function CampusMap() {
         const layerId = `parking-${p.id}`;
 
         const source = mm.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
-        const data = {
-          type: "Feature" as const,
-          properties: { id: p.id },
-          geometry: { type: "LineString" as const, coordinates: p.coordinates },
+        const isPoint = p.coordinates.length === 1;
+        const geometry: Point | LineString = isPoint
+          ? ({ type: "Point", coordinates: p.coordinates[0] as Position } as Point)
+          : ({ type: "LineString", coordinates: p.coordinates as Position[] } as LineString);
+
+        const data: Feature<Point | LineString> = {
+          type: "Feature",
+          properties: { id: p.id, size: p.size },
+          geometry,
         };
 
         if (!source) {
-          // Ajoute la source et la couche
           mm.addSource(sourceId, { type: "geojson", data });
-          mm.addLayer({
-            id: layerId,
-            type: "line",
-            source: sourceId,
-            layout: { "line-join": "round", "line-cap": "round" },
-            paint: {
-              "line-color": p.paint["line-color"],
-              "line-width": p.paint["line-width"],
-            },
-          });
 
+          if (isPoint) {
+            mm.addLayer({
+              id: layerId,
+              type: "circle",
+              source: sourceId,
+              paint: {
+                "circle-radius": p.size,
+                "circle-color": getColorFromValue(p.occupation ?? 0),
+                "circle-opacity": 0.8,
+              },
+            });
+          } else {
+            mm.addLayer({
+              id: layerId,
+              type: "line",
+              source: sourceId,
+              layout: { "line-join": "round", "line-cap": "round" },
+              paint: {
+                "line-width": p.size,
+                "line-color": getColorFromValue(p.occupation ?? 0),
+                "line-opacity": 0.8,
+              },
+            });
+          }
           mm.on("mouseenter", layerId, () => (mm.getCanvas().style.cursor = "pointer"));
           mm.on("mouseleave", layerId, () => (mm.getCanvas().style.cursor = ""));
           mm.on("click", layerId, (e) => {
@@ -292,77 +400,53 @@ function CampusMap() {
             setSelectedParking(fresh);
           });
         } else {
-          // Mise à jour
           source.setData(data as any);
           if (mm.getLayer(layerId)) {
-            mm.setPaintProperty(layerId, "line-color", p.paint["line-color"]);
-            mm.setPaintProperty(layerId, "line-width", p.paint["line-width"]);
+            mm.setPaintProperty(layerId, "line-color", getColorFromValue(p.occupation ?? 0));
+            mm.setPaintProperty(layerId, "line-width", p.size);
           }
         }
       });
     }
 
-    // Si le style n'est pas encore chargé, on attend
     if (!m.isStyleLoaded()) {
       const onLoad = () => syncLayersWithMap(m);
       m.on("load", onLoad);
       cleanup = () => m.off("load", onLoad);
     } else {
-      // Sinon, on synchronise directement
       syncLayersWithMap(m);
     }
 
-    return () => {
-      if (cleanup) cleanup();
-    };
+    return () => { if (cleanup) cleanup(); };
   }, [parkings]);
-
 
   const handleApply = async (newOccupation: number) => {
     if (!selectedParking) return;
 
     const newColor = getColorFromValue(newOccupation);
-    // Optimistic UI
     setParkings((prev) =>
       prev.map((p) =>
         p.id === selectedParking.id
-          ? {
-            ...p,
-            occupation: newOccupation,
-            lastUpdated: Date.now(),
-            paint: { ...p.paint, "line-color": newColor },
-          }
+          ? { ...p, occupation: newOccupation, lastUpdated: Date.now() }
           : p
       )
     );
     setSelectedParking((prev) =>
-      prev
-        ? {
-          ...prev,
-          occupation: newOccupation,
-          lastUpdated: Date.now(),
-          paint: { ...prev.paint, "line-color": newColor },
-        }
-        : prev
+      prev ? { ...prev, occupation: newOccupation, lastUpdated: Date.now() } : prev
     );
 
-    // Persist Firestore
     const ref = doc(db, "parkings", String(selectedParking.id));
     await updateDoc(ref, {
       occupation: newOccupation,
       lastUpdated: Date.now(),
-      "paint.line-color": newColor,
     }).catch(async () => {
-      // si le doc n'existe pas (edge), on le crée
       await setDoc(ref, {
         ...selectedParking,
         occupation: newOccupation,
         lastUpdated: Date.now(),
-        paint: { ...selectedParking.paint, "line-color": newColor },
       });
     });
 
-    // Met à jour la couche MapLibre
     const map = mapRef.current;
     const layerId = `parking-${selectedParking.id}`;
     if (map && map.getLayer(layerId)) {
@@ -371,41 +455,15 @@ function CampusMap() {
   };
 
   return (
-    <div style={{ position: "relative", width: "100%", height: 720 }}>
-      <div
-        ref={containerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: 6,
-          overflow: "hidden",
-          boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
-        }}
-      />
+    <div className={styles.mapSectionRoot}>
+      <div ref={containerRef} className={styles.mapCanvas} />
 
       {selectedParking && (
-        <div
-          onClick={() => setSelectedParking(null)}
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 9,
-            background: "transparent",
-          }}
-        />
+        <div onClick={() => setSelectedParking(null)} className={styles.modalOverlay} />
       )}
 
       {selectedParking && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            zIndex: 10,
-            pointerEvents: "none",
-          }}
-        >
+        <div className={styles.modalWrapper}>
           <ParkingPopup
             parking={selectedParking}
             onClose={() => setSelectedParking(null)}
@@ -421,6 +479,7 @@ function CampusMap() {
 export default function App() {
   const [open, setOpen] = useState(false);
   const [nearBottom, setNearBottom] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     const handle = () => {
@@ -472,13 +531,17 @@ export default function App() {
             <a href="#mission" className={styles.navLink} onClick={() => setOpen(false)}>
               Notre mission
             </a>
-            <a href="#don" className={styles.navLink} onClick={() => setOpen(false)}>
+            <a href="https://Ko-fi.com/skameparking" target="_blank" rel="noreferrer" className={styles.navLink} onClick={() => setOpen(false)}>
               Don
             </a>
             <a
               href="#login"
               className={`${styles.cta} ${styles.navLink}`}
-              onClick={() => setOpen(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                setAuthOpen(true);
+              }}
             >
               Connexion/Inscription
             </a>
@@ -576,11 +639,7 @@ export default function App() {
           aria-label="Aller en bas de page"
           onClick={scrollToBottom}
         >
-          <svg
-            viewBox="0 0 24 24"
-            className={styles.mobileArrowIcon}
-            aria-hidden="true"
-          >
+          <svg viewBox="0 0 24 24" className={styles.mobileArrowIcon} aria-hidden="true">
             <path
               d="M12 4v14m0 0l-6-6m6 6l6-6"
               fill="none"
@@ -592,6 +651,8 @@ export default function App() {
           </svg>
         </button>
       )}
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

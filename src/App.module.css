@@ -5,6 +5,7 @@
   --text: #1b1b1b;
   --muted: #6b6b6b;
   --bg: #ffffff;
+  --slider-thumb-size: 20px;
 }
 
 * {
@@ -54,15 +55,11 @@
 }
 
 @media (min-width:1200px) {
-  .brandLogo {
-    height: 76px;
-  }
+  .brandLogo { height: 76px; }
 }
 
 @media (max-width:360px) {
-  .brandLogo {
-    height: clamp(36px, 9vw, 52px);
-  }
+  .brandLogo { height: clamp(36px, 9vw, 52px); }
 }
 
 .burger {
@@ -84,9 +81,7 @@
 }
 
 @media (min-width:880px) {
-  .burger {
-    display: none;
-  }
+  .burger { display: none; }
 }
 
 .nav {
@@ -100,9 +95,7 @@
   gap: .5rem;
 }
 
-.navOpen {
-  transform: translateY(0);
-}
+.navOpen { transform: translateY(0); }
 
 @media (min-width:880px) {
   .nav {
@@ -124,9 +117,7 @@
   border-radius: 8px;
 }
 
-.navLink:hover {
-  background: #f6f6f6;
-}
+.navLink:hover { background: #f6f6f6; }
 
 .cta {
   background: var(--brand);
@@ -137,9 +128,7 @@
   box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
 }
 
-.cta:hover {
-  filter: brightness(.95);
-}
+.cta:hover { filter: brightness(.95); }
 
 .main {
   display: grid;
@@ -163,7 +152,6 @@
   margin: .4rem 0 1.2rem;
 }
 
-/* ===== UNE SEULE CLASSE POUR TOUS LES BLOCS DE TEXTE ===== */
 .text {
   display: grid;
   gap: clamp(.8rem, 1.8vw, 1.2rem);
@@ -174,18 +162,9 @@
   color: var(--brand);
 }
 
-.text p {
-  margin: 0;
-}
-
-.text em {
-  font-style: italic;
-  color: inherit;
-}
-
-.text strong {
-  font-weight: 800;
-}
+.text p { margin: 0; }
+.text em { font-style: italic; color: inherit; }
+.text strong { font-weight: 800; }
 
 .objTitle {
   font-weight: 800;
@@ -205,7 +184,6 @@
   color: var(--brand);
 }
 
-/* Pétition */
 .petitionBox {
   display: grid;
   place-items: center;
@@ -234,13 +212,8 @@
   box-shadow: 0 2px 0 rgba(0, 0, 0, .08);
 }
 
-.petitionBtn:hover {
-  filter: brightness(.95);
-}
-
-.petitionBtn:active {
-  transform: translateY(1px);
-}
+.petitionBtn:hover { filter: brightness(.95); }
+.petitionBtn:active { transform: translateY(1px); }
 
 @media (max-width:360px) {
   .petitionBtn {
@@ -259,7 +232,6 @@
   }
 }
 
-/* Flèche mobile */
 .mobileArrow {
   position: fixed;
   left: 50%;
@@ -278,28 +250,321 @@
   transition: opacity .25s ease, visibility .25s ease, transform .08s ease;
 }
 
-.mobileArrow:active {
-  transform: translateX(-50%) translateY(1px);
+.mobileArrow:active { transform: translateX(-50%) translateY(1px); }
+.mobileArrowIcon { width: 26px; height: 26px; }
+.mobileArrowHidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.mobileArrowVisible { opacity: 1; visibility: visible; }
+
+@media (min-width:768px) { .mobileArrow { display: none; } }
+
+/* =============== MAP & MODAL (ex-inlines) =============== */
+.mapSectionRoot {
+  position: relative;
+  width: 100%;
+  height: 720px;
 }
 
-.mobileArrowIcon {
-  width: 26px;
-  height: 26px;
+.mapCanvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.12);
 }
 
-.mobileArrowHidden {
-  opacity: 0;
-  visibility: hidden;
+.modalOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  background: transparent;
+}
+
+.modalWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
   pointer-events: none;
 }
 
-.mobileArrowVisible {
-  opacity: 1;
-  visibility: visible;
+/* ================= POPUP (ex-inlines) =================== */
+.popup {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.25);
+  padding: 16px 18px 14px;
+  min-width: 260px;
+  max-width: 340px;
+  pointer-events: auto;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-@media (min-width:768px) {
-  .mobileArrow {
-    display: none;
-  }
+.popupTitle {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.popupInfo {
+  font-size: 13px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.sliderLabel {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.slider {
+  width: 100%;
+  margin-bottom: 8px;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #00C853 0%, #FFD600 50%, #D50000 100%);
+  outline: none;
+  cursor: pointer;
+  color: var(--brand);
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  border-radius: 50%;
+  background: currentColor;
+  border: 2px solid white;
+  box-shadow: 0 0 3px rgba(0,0,0,0.4);
+}
+
+.slider::-moz-range-thumb {
+  width: var(--slider-thumb-size);
+  height: var(--slider-thumb-size);
+  border-radius: 50%;
+  background: currentColor;
+  border: 2px solid white;
+  box-shadow: 0 0 3px rgba(0,0,0,0.4);
+}
+
+.popupSince {
+  font-size: 12px;
+  color: #555;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.popupFooter {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn {
+  appearance: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btnGhost {
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #111;
+}
+
+.btnPrimary {
+  border: none;
+  background: #111;
+  color: #fff;
+}
+
+/* ================= AUTH MODAL ================= */
+.authOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+.authModal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.authModal > * {
+  pointer-events: auto;
+}
+
+.authModal {
+  /* wrapper already fixed; inner panel next */
+}
+
+.authModal::before { content: ""; }
+
+.authModal > .authPanel { /* (unused) */ }
+
+.authModal > .authPanel {}
+
+.authModal .authTitle {}
+
+.authModal .authTitle,
+.authTitle {
+  font-weight: 900;
+  font-size: clamp(1.25rem, 3.6vw, 1.6rem);
+  margin: 0 0 .25rem;
+  color: var(--text, #1b1b1b);
+}
+
+.authSubtitle {
+  margin: 0 0 .8rem;
+  font-size: .95rem;
+  color: var(--muted, #6b6b6b);
+}
+
+.authModal {
+  /* center card */
+}
+.authModal > .authCard,
+.authCard {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.22);
+  padding: 18px 16px 16px;
+  width: min(520px, 92vw);
+  position: relative;
+}
+
+.authClose {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 0;
+  background: #f3f3f3;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.authStack {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.authBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #e6e6e6;
+  background: #fff;
+  font-weight: 800;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: transform .05s ease, filter .15s ease;
+}
+
+.authBtn:active { transform: translateY(1px); }
+.authBtn:disabled { opacity: .6; cursor: not-allowed; }
+
+.authBtnIcon { font-size: 16px; }
+
+.authGoogle { border-color: #e6e6e6; }
+.authMicrosoft { border-color: #e6e6e6; }
+
+.authDivider {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  color: #888;
+  font-size: .9rem;
+}
+
+.authDivider span {
+  position: relative;
+  padding: 0 .6rem;
+}
+.authDivider span::before,
+.authDivider span::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 90px;
+  height: 1px;
+  background: #eee;
+}
+.authDivider span::before { right: 100%; margin-right: .6rem; }
+.authDivider span::after { left: 100%; margin-left: .6rem; }
+
+.authEmailRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.authInput {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #e6e6e6;
+  padding: 0 .9rem;
+  font-size: 1rem;
+}
+
+.authEmailBtn {
+  background: var(--brand, #d10d09);
+  color: #fff;
+  border: 0;
+}
+
+.authHelper {
+  margin: 4px 2px 0;
+  font-size: .85rem;
+  color: var(--muted, #6b6b6b);
+}
+
+.authLegal {
+  margin: 4px 2px 0;
+  font-size: .8rem;
+  color: #9b9b9b;
+}
+
+.authError {
+  color: #c62828;
+  background: #fdecea;
+  border: 1px solid #f4c7c3;
+  padding: .6rem .75rem;
+  border-radius: 10px;
+  font-size: .9rem;
+}
+
+/* Transforme la structure du composant modal actuel */
+.authModal {
+  /* We render the card directly inside .authModal */
+}
+.authModal > .authCard,
+.authModal > div {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.22);
+  padding: 18px 16px 16px;
+  width: min(520px, 92vw);
+  position: relative;
 }
