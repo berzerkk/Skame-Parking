@@ -18,7 +18,7 @@ import {
   GeoPoint,
 } from "firebase/firestore";
 
-import { db } from "@/firebaseClient"; // ✅ on utilise le singleton initialisé
+import { db } from "@/FirebaseClient";
 
 import { SEED, type Parking } from "@/Parking";
 import { supabase } from "@/supabaseClient";
@@ -80,7 +80,6 @@ function ParkingPopup({
   const [uploading, setUploading] = useState(false);
 
   const sinceText = useMemo(() => timeAgo(parking.lastUpdated), [parking.lastUpdated]);
-  const thumbColor = useMemo(() => getColorFromValue(value), [value]);
 
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(getParkingPhotoUrl(parking));
   useEffect(() => {
