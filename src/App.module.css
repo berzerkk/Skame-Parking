@@ -31,7 +31,6 @@ body {
 .page {
   background: var(--bg);
   transition: background 0.3s ease, color 0.3s ease;
-  min-height: 100dvh;
 
   font-family: "Raleway", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -65,6 +64,7 @@ body {
   font-family: "Raleway", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--brand);
   font-weight: 700;
+  cursor: pointer;
 }
 
 .brand {
@@ -117,7 +117,6 @@ body {
   }
 }
 
-/* cache la nav mobile, on gardera la version desktop seulement ≥880px */
 .nav {
   display: none;
 }
@@ -134,12 +133,10 @@ body {
   }
 }
 
-/* ======= NAV MODAL (mobile) ======= */
 .navOverlay {
   position: fixed;
   inset: 0;
   z-index: 100;
-  /* au-dessus du header */
   background: rgba(0, 0, 0, 0.35);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -217,29 +214,17 @@ body {
   padding-top: 12px;
 }
 
-.navMenu a,
-.navMenu button {
+.navMenu a {
   text-decoration: none;
   font-weight: 700;
   color: var(--brand);
   padding: .65rem .75rem;
   border-radius: 10px;
-  background: #f7f7f7;
   border: 0;
+  background: var(--border);
   text-align: left;
 }
 
-:root[data-theme="dark"] .navMenu a,
-:root[data-theme="dark"] .navMenu button {
-  background: #1e1e1e;
-}
-
-.navMenu a:hover,
-.navMenu button:hover {
-  filter: brightness(.97);
-}
-
-/* empêcher le scroll du body quand le modal est ouvert */
 .bodyNoScroll {
   overflow: hidden;
 }
@@ -253,7 +238,7 @@ body {
 }
 
 .navLink:hover {
-  background: #f6f6f6;
+  background: var(--border);
 }
 
 .cta {
@@ -278,6 +263,14 @@ body {
 .section {
   max-width: 780px;
   width: 100%;
+  padding-left: clamp(.8rem, 3vw, 2rem);
+  padding-right: clamp(.8rem, 3vw, 2rem);
+}
+
+.sectionBis {
+  max-width: 780px;
+  width: 100%;
+  margin-top: 12rem;
   padding-left: clamp(.8rem, 3vw, 2rem);
   padding-right: clamp(.8rem, 3vw, 2rem);
 }
@@ -429,7 +422,6 @@ body {
   }
 }
 
-/* =============== MAP & MODAL (ex-inlines) =============== */
 .mapSectionRoot {
   position: relative;
   width: 100%;
@@ -466,7 +458,6 @@ body {
   pointer-events: none;
 }
 
-/* ================= POPUP (ex-inlines) =================== */
 .popup {
   position: relative;
   background: var(--bg);
@@ -583,6 +574,7 @@ body {
   justify-content: center;
   gap: 40px;
 }
+
 .socials a {
   color: var(--brand);
 }

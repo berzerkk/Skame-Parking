@@ -17,24 +17,18 @@ export default function Contact() {
             <p>Tu peux nous contacter à :</p>
             <p>skameparking@hotmail.com</p>
           </div>
+        </section>
 
+        <section className={styles.sectionBis}>
           <h1 className={styles.title}>Réseaux sociaux</h1>
           <div className={styles.socials}>
-            <a href="https://www.linkedin.com/company/skame-parking/">
-              <FaLinkedin />
-            </a>
-            <a href="https://www.tiktok.com/@skameparking">
-              <FaTiktok />
-            </a>
-            <a href="https://www.instagram.com/skameparking/">
-              <FaInstagram />
-            </a>
+            <a href="https://www.linkedin.com/company/skame-parking/" target="_blank" rel="noopener noreferrer"><FaLinkedin /></a>
+            <a href="https://www.tiktok.com/@skameparking" target="_blank" rel="noopener noreferrer"><FaTiktok /></a>
+            <a href="https://www.instagram.com/skameparking/" target="_blank" rel="noopener noreferrer"><FaInstagram /></a>
           </div>
 
           <div className={styles.petitionBox}>
-            <Link to="/" className={styles.petitionBtn}>
-              Retourner à la carte
-            </Link>
+            <Link to="/" className={styles.petitionBtn}>Retourner à la carte</Link>
           </div>
         </section>
       </main>

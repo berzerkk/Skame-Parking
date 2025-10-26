@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import styles from "./App.module.css";
 import type { LayoutOutletCtx } from "./Layout";
@@ -6,20 +6,47 @@ import CampusMap from "./CampusMap";
 
 export default function App() {
   const { nightmode } = useOutletContext<LayoutOutletCtx>();
-
+  const [nearBottom, setNearBottom] = useState(false);
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", nightmode ? "dark" : "light");
   }, [nightmode]);
 
+  useEffect(() => {
+    const handle = () => {
+      const docEl = document.documentElement;
+      const full =
+        Math.max(docEl.scrollHeight, document.body.scrollHeight) ||
+        docEl.scrollHeight;
+      const y = window.scrollY || window.pageYOffset;
+      const vh = window.innerHeight;
+      setNearBottom(vh + y >= full - 120);
+    };
+    handle();
+    window.addEventListener("scroll", handle, { passive: true });
+    window.addEventListener("resize", handle);
+    return () => {
+      window.removeEventListener("scroll", handle);
+      window.removeEventListener("resize", handle);
+    };
+  }, []);
+
+  const scrollToBottom = () => {
+    const h = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    );
+    window.scrollTo({ top: h, behavior: "smooth" });
+  };
+
   return (
     <div className={styles.page}>
-      <main id="mission" className={styles.main}>
+      <main className={styles.main}>
         <section className={styles.section} aria-label="Carte campus">
           <CampusMap nightmode={nightmode} />
         </section>
 
         <section className={styles.section}>
-          <h1 className={styles.title}>Notre mission</h1>
+          <h1 id="mission" className={styles.title}>Notre mission</h1>
 
           <div className={styles.text}>
             <p>
@@ -89,13 +116,22 @@ export default function App() {
             </p>
 
             <div className={styles.petitionBox} id="petition">
-              <a href="https://c.org/CwFHpvtnz2" className={styles.petitionBtn}>
+              <a href="https://c.org/CwFHpvtnz2" className={styles.petitionBtn} target="_blank" rel="noopener noreferrer">
                 Signer la pétition
               </a>
             </div>
           </div>
         </section>
       </main>
+
+      {!nearBottom && (
+        <button className={styles.mobileArrow} aria-label="Aller en bas de page" onClick={scrollToBottom}>
+          <svg viewBox="0 0 24 24" className={styles.mobileArrowIcon} aria-hidden="true">
+            <path d="M12 4v14m0 0l-6-6m6 6l6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+
     </div>
   );
 }

@@ -1,4 +1,3 @@
-// src/firebaseClient.ts
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
@@ -10,14 +9,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FB_APP_ID,
 };
 
-// (optionnel) petit sanity check
-for (const [k, v] of Object.entries(firebaseConfig)) {
-  if (!v) console.warn(`Firebase config missing: ${k}=${String(v)}`);
+const missing = Object.entries(firebaseConfig)
+  .filter(([, v]) => !v)
+  .map(([k]) => k);
+
+if (missing.length) {
+  throw new Error(`Firebase config manquante: ${missing.join(", ")}. ` + `Vérifie .env.production et rebuild.`);
 }
 
-// Initialise une seule fois
 export const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-
-// Exporte les singletons
 export const db = getFirestore(app);
 export const auth = getAuth(app);
