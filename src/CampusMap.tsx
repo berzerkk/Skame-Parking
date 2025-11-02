@@ -74,7 +74,7 @@ function ParkingPopup({
     const getParkingPhotoUrl = (p: any): string | undefined =>
         p ? (typeof p.photo === "string" ? p.photo : p.photo?.url) : undefined;
 
-    const [editMode, setEditMode] = useState(false); // lecture par défaut
+    const [editMode, setEditMode] = useState(false);
     const [value, setValue] = useState<number>(parking.occupation);
     const [remainingMs, setRemainingMs] = useState<number>(0);
     const [applying, setApplying] = useState(false);
@@ -89,7 +89,6 @@ function ParkingPopup({
         const url = getParkingPhotoUrl(parking);
         const busted = (parking as any)?.photoUpdatedAt ? `${url}?v=${(parking as any).photoUpdatedAt}` : url;
         setRemoteUrl(busted);
-        // reset staging et retour lecture quand on change de parking
         if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
         setStagedFile(null);
         setStagedPreviewUrl(undefined);
@@ -129,22 +128,14 @@ function ParkingPopup({
         }
     };
 
-    // Appliquer = soit passer en édition (si lecture), soit sauvegarder (si édition)
     const handlePrimary = async () => {
         if (!editMode) {
+            if (remainingMs > 0) return;
             setEditMode(true);
-            return;
-        }
-
-        // édition → sauvegarde
-        const { allowed, remainingMs } = checkCooldown(cooldownKey);
-        if (!allowed) {
-            alert(`Trop rapide ! Réessaie dans ${fmtCountdown(remainingMs)}.`);
             return;
         }
         try {
             setApplying(true);
-
             if (stagedFile) {
                 const url = await uploadParkingPhoto(parking.id, stagedFile);
                 const ts = Date.now();
@@ -157,54 +148,48 @@ function ParkingPopup({
             // après sauvegarde, on ferme
             onClose();
         } catch (err: any) {
-            alert(err?.message || "Erreur lors de l’enregistrement");
+            console.log(err);
+
+            alert(err?.message || "Erreur lors de l'enregistrement");
         } finally {
             setApplying(false);
         }
     };
 
-    // Secondaire :
-    // - Lecture: Fermer
-    // - Édition: Annuler → ferme le popup (et jette les changements)
     const handleSecondary = () => {
-        // cleanup éventuel
         if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
         setStagedFile(null);
         setStagedPreviewUrl(undefined);
         setUploading(false);
         setApplying(false);
         setValue(parking.occupation);
-        onClose(); // <<< en édition, "Annuler" ferme bien la modale
+        onClose();
     };
 
-    // URLs d’affichage :
-    const readPhotoUrl = remoteUrl; // lecture: on montre la photo existante si présente
+    const readPhotoUrl = remoteUrl;
     const editPreviewUrl = stagedPreviewUrl;
 
     const primaryLabel = editMode
         ? (applying ? "Enregistrement..." : remainingMs > 0 ? fmtCountdown(remainingMs) : "Appliquer")
-        : "Modifier";
+        : (remainingMs > 0 ? fmtCountdown(remainingMs) : "Modifier");
     const secondaryLabel = editMode ? "Annuler" : "Fermer";
 
     return (
         <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
             <div className={styles.popupTitle}>{parking.name}</div>
 
-            {/* Bloc photo */}
             <div style={{ display: "grid", gap: 8, marginBottom: 10 }}>
                 <label className={styles.sliderLabel}>Photo du parking</label>
 
                 <div
-                    {...(editMode
-                        ? {
-                            role: "button" as const,
-                            tabIndex: 0,
-                            onClick: onPickFileClick,
-                            onKeyDown: (e: any) => (e.key === "Enter" || e.key === " " ? onPickFileClick() : null),
-                            title: "Choisir une photo",
-                            "aria-label": "Choisir une photo du parking",
-                        }
-                        : {})}
+                    {...(editMode ? {
+                        role: "button" as const,
+                        tabIndex: 0,
+                        onClick: onPickFileClick,
+                        onKeyDown: (e: any) => (e.key === "Enter" || e.key === " " ? onPickFileClick() : null),
+                        title: "Choisir une photo",
+                        "aria-label": "Choisir une photo du parking",
+                    } : {})}
                     style={{
                         width: "100%",
                         maxHeight: 150,
@@ -221,41 +206,23 @@ function ParkingPopup({
                 >
                     {editMode ? (
                         editPreviewUrl ? (
-                            <img
-                                src={editPreviewUrl}
-                                alt={`${parking.name} - photo`}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                        ) : (
-                            <div style={{ textAlign: "center", color: "#666", fontSize: 13, userSelect: "none" }}>
-                                Cliquer pour ajouter une photo
-                            </div>
-                        )
-                    ) : readPhotoUrl ? (
-                        <img
-                            src={readPhotoUrl}
-                            alt={`${parking.name} - photo`}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                    ) : (
+                            <img src={editPreviewUrl} alt={`${parking.name} - photo`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (
+                            <div style={{ textAlign: "center", color: "#666", fontSize: 13, userSelect: "none" }}>Cliquer pour ajouter une photo</div>)
+                    ) : readPhotoUrl ? (<img src={readPhotoUrl} alt={`${parking.name} - photo`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (
                         <div style={{ width: "100%", height: "100%" }} />
                     )}
 
                     {editMode && stagedFile && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                bottom: 8,
-                                right: 8,
-                                padding: "4px 8px",
-                                borderRadius: 999,
-                                background: "rgba(0,0,0,0.6)",
-                                color: "white",
-                                fontSize: 12,
-                            }}
-                        >
-                            Modif non enregistrée
-                        </div>
+                        <div style={{
+                            position: "absolute",
+                            bottom: 8,
+                            right: 8,
+                            padding: "4px 8px",
+                            borderRadius: 999,
+                            background: "rgba(0,0,0,0.6)",
+                            color: "white",
+                            fontSize: 12,
+                        }}>Modif non enregistrée</div>
                     )}
                 </div>
 
@@ -272,9 +239,7 @@ function ParkingPopup({
                 {editMode && uploading && <div style={{ fontSize: 12, color: "#666" }}>Préparation de l’aperçu…</div>}
             </div>
 
-            <label htmlFor="occupation-slider" className={styles.sliderLabel}>
-                Occupation : <strong>{value}%</strong>
-            </label>
+            <label htmlFor="occupation-slider" className={styles.sliderLabel}>Occupation : <strong>{value}%</strong></label>
             <input
                 id="occupation-slider"
                 className={styles.slider}
@@ -298,7 +263,7 @@ function ParkingPopup({
                     className={`${styles.btn} ${styles.btnPrimary}`}
                     aria-live="polite"
                     aria-busy={applying || undefined}
-                    disabled={editMode ? (remainingMs > 0 || applying) : false}
+                    disabled={editMode ? (remainingMs > 0 || applying) : (remainingMs > 0)}
                 >
                     {primaryLabel}
                 </button>
@@ -307,23 +272,18 @@ function ParkingPopup({
     );
 }
 
-
-
-
-
 export default function CampusMap({ nightmode }: { nightmode: boolean }) {
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const mapRef = useRef<maplibregl.Map | null>(null);
     const [selectedParking, setSelectedParking] = useState<Parking | null>(null);
-    const selectedParkingRef = useRef<Parking | null>(null);
-
     const [parkings, setParkings] = useState<Parking[]>([]);
     const parkingsRef = useRef<Parking[]>(parkings);
-    useEffect(() => { parkingsRef.current = parkings; }, [parkings]);
-
+    const mapRef = useRef<maplibregl.Map | null>(null);
+    const selectedParkingRef = useRef<Parking | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const centerLng = 7.056407;
     const centerLat = 43.612551;
     const delta = 0.005;
+
+    useEffect(() => { parkingsRef.current = parkings; }, [parkings]);
 
     useEffect(() => {
         (async () => {
@@ -493,8 +453,13 @@ export default function CampusMap({ nightmode }: { nightmode: boolean }) {
         const map = mapRef.current;
         const layerId = `parking-${selectedParking.id}`;
         if (map && map.getLayer(layerId)) {
-            map.setPaintProperty(layerId, "line-color", newColor);
-            map.setPaintProperty(layerId, "circle-color", newColor);
+            const isPoint = (selectedParking.coordinates?.length ?? 0) === 1;
+            const paintProp = isPoint ? "circle-color" : "line-color";
+            try {
+                map.setPaintProperty(layerId, paintProp, newColor);
+            } catch (e) {
+                console.warn("setPaintProperty failed", e);
+            }
         }
         startCooldown(key, COOLDOWN_MIN);
     };
